@@ -30,8 +30,8 @@ func main() {
 
 func upload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		fmt.Fprintln(w, `Usage: POST a multipart form to this endpoint with a file in the "file" form field.`)
 		w.WriteHeader(400)
+		fmt.Fprintln(w, `Usage: POST a multipart form to this endpoint with a file in the "file" form field.`)
 		return
 	}
 
