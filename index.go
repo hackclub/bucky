@@ -22,6 +22,7 @@ func main() {
 	}
 
 	http.HandleFunc("/", upload)
+	http.HandleFunc("/chunked/", chunked)
 
 	log.Println("Listening on port " + port + "!")
 	log.Fatal(http.ListenAndServe(":"+port, nil))
@@ -31,9 +32,17 @@ func main() {
 func cors(w http.ResponseWriter) {
 	h := w.Header()
 	h.Set("Access-Control-Allow-Origin", "*")
-	h.Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	h.Set("Access-Control-Allow-Methods", "POST, PUT, OPTIONS")
 	h.Set("Access-Control-Allow-Headers", "Content-Type")
 	h.Set("Access-Control-Max-Age", "86400")
+}
+
+// newSession is the session the S3 clients use.
+func newSession() *session.Session {
+	return session.Must(session.NewSession(&aws.Config{
+		Region:      aws.String(os.Getenv("S3_REGION")),
+		Credentials: credentials.NewStaticCredentials(os.Getenv("AWS_ID"), os.Getenv("AWS_SECRET"), ""),
+	}))
 }
 
 func upload(w http.ResponseWriter, r *http.Request) {
@@ -68,14 +77,8 @@ func upload(w http.ResponseWriter, r *http.Request) {
 	// Hash the file
 	sum := sha256.Sum256(fileBytes)
 
-	// The session the S3 Uploader will use
-	sess := session.Must(session.NewSession(&aws.Config{
-		Region:      aws.String(os.Getenv("S3_REGION")),
-		Credentials: credentials.NewStaticCredentials(os.Getenv("AWS_ID"), os.Getenv("AWS_SECRET"), ""),
-	}))
-
 	// Create an uploader with the session and default options
-	uploader := s3manager.NewUploader(sess)
+	uploader := s3manager.NewUploader(newSession())
 
 	// Upload the file to S3.
 	uploadOutput, err := uploader.Upload(&s3manager.UploadInput{
